@@ -8,12 +8,16 @@
 
 HolmesGPT는 사용자의 질문이나 알림을 받아 LLM 기반 에이전틱 루프를 통해 외부 시스템에서 데이터를 수집하고, 근본 원인을 분석한 뒤 결론을 도출합니다.
 
-```
-사용자 → CLI/API → ToolCallingLLM → ToolExecutor → Toolsets → 외부 시스템
-                         ↑                              ↓
-                    LLM (LiteLLM)               K8s, Prometheus,
-                 anthropic/claude,              Grafana, ArgoCD,
-                 gpt-4.1, vLLM 등              Elasticsearch, ...
+```mermaid
+graph LR
+    User[사용자] --> CLI[CLI / API]
+    CLI --> LLM[ToolCallingLLM]
+    LLM --> Executor[ToolExecutor]
+    Executor --> Toolsets[Toolsets]
+    Toolsets --> External[외부 시스템]
+
+    LiteLLM[LLM Provider\nLiteLLM\nanthropic/claude\ngpt-4.1 · vLLM] -.-> LLM
+    External --- Targets[K8s · Prometheus\nGrafana · ArgoCD\nElasticsearch ...]
 ```
 
 각 컴포넌트의 역할은 다음과 같습니다.
@@ -29,24 +33,19 @@ HolmesGPT는 사용자의 질문이나 알림을 받아 LLM 기반 에이전틱 
 
 HolmesGPT의 핵심은 LLM이 스스로 어떤 도구를 호출할지 결정하는 에이전틱 루프입니다. 단순 프롬프트-응답이 아니라, 반복적으로 도구를 호출하며 점진적으로 문제를 진단합니다.
 
-```
-질문/알림 수신
-    ↓
-프롬프트 생성 (시스템 프롬프트 + 사용자 질문 + 런북)
-    ↓
-┌─────────────────────────────────────┐
-│  LLM 추론 (function calling)        │
-│    ↓                                │
-│  도구 선택 및 호출                    │
-│    ↓                                │
-│  도구 실행 결과 수신                  │
-│    ↓                                │
-│  결과 분석 → 추가 조사 필요?          │
-│    ├─ 예 → 루프 반복                 │
-│    └─ 아니오 → 최종 결론 생성         │
-└─────────────────────────────────────┘
-    ↓
-결론 출력 (CLI 표시 / Slack 전송 / API 응답)
+```mermaid
+flowchart TD
+    A[질문 / 알림 수신] --> B[프롬프트 생성\n시스템 프롬프트 + 사용자 질문 + 런북]
+    B --> C[LLM 추론\nfunction calling]
+    C --> D[도구 선택 및 호출]
+    D --> E[도구 실행 결과 수신]
+    E --> F{추가 조사 필요?}
+    F -- 예 --> C
+    F -- 아니오 --> G[최종 결론 생성]
+    G --> H[결론 출력\nCLI 표시 / Slack 전송 / API 응답]
+
+    style C fill:#e1f5fe
+    style F fill:#fff3e0
 ```
 
 주요 특성은 다음과 같습니다.
@@ -298,26 +297,26 @@ toolsets:
 
 아래 예시는 "왜 checkout-api 파드가 CrashLoopBackOff 상태인가?"라는 질문에 대한 조사 흐름을 보여줍니다.
 
-```
-1. 사용자 질문 수신
-   holmes ask "checkout-api 파드가 CrashLoopBackOff 상태입니다. 원인을 분석해주세요."
+```mermaid
+sequenceDiagram
+    participant User as 사용자
+    participant LLM as ToolCallingLLM
+    participant K8s as kubernetes/core
+    participant Prom as prometheus/metrics
 
-2. ToolCallingLLM이 사용 가능한 도구 목록 확인
-   → kubernetes/core, prometheus/core, grafana/dashboards 등
+    User->>LLM: checkout-api 파드가 CrashLoopBackOff입니다.<br/>원인을 분석해주세요.
+    Note over LLM: 사용 가능한 도구 목록 확인<br/>kubernetes/core, prometheus/metrics, ...
 
-3. LLM 1차 도구 호출: kubectl_get_pods
-   → checkout-api-7b9f4d6c8-x2k9m: CrashLoopBackOff (Restart: 15)
+    LLM->>K8s: kubectl_get_pods
+    K8s-->>LLM: CrashLoopBackOff (Restart: 15)
 
-4. LLM 2차 도구 호출: kubectl_logs
-   → "OOMKilled" 시그널 확인
+    LLM->>K8s: kubectl_logs
+    K8s-->>LLM: OOMKilled 시그널 확인
 
-5. LLM 3차 도구 호출: prometheus_query
-   → container_memory_usage_bytes 메트릭 조회
-   → 메모리 사용량이 limit에 도달하는 패턴 확인
+    LLM->>Prom: prometheus_query<br/>container_memory_usage_bytes
+    Prom-->>LLM: 메모리 사용량이 limit에 도달하는 패턴
 
-6. LLM 최종 결론 생성
-   → 근본 원인: 메모리 limit 부족
-   → 권장 조치: memory limit 상향 또는 메모리 누수 조사
+    LLM->>User: 근본 원인: 메모리 limit 부족<br/>권장 조치: memory limit 상향<br/>또는 메모리 누수 조사
 ```
 
 ---
