@@ -20,6 +20,7 @@ On-prem Kubernetes 및 Amazon EKS 환경에서의 배포, 내장 도구셋 활�
 | [11-config-reference.md](11-config-reference.md) | 통합 config.yaml 참조 | 전체 |
 | [12-runbooks.md](12-runbooks.md) | 커스텀 런북 작성 | SRE |
 | [13-usecases.md](13-usecases.md) | 사용 사례 및 예시 프롬프트 | 전체 |
+| [14-deep-agent-architecture.md](14-deep-agent-architecture.md) | 딥 에이전트 아키텍처 개선 계획 | 아키텍트 / SRE |
 
 ## 환경 컴포넌트별 문서 매핑
 
@@ -38,6 +39,7 @@ On-prem Kubernetes 및 Amazon EKS 환경에서의 배포, 내장 도구셋 활�
 | JupyterHub | 09, 11 |
 | FastAPI | 10, 11 |
 | 런북 운영 | 12, 13 |
+| 아키텍처 개선 | 02, 14 |
 
 ## Quick Start
 
