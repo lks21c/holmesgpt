@@ -173,3 +173,6 @@ eval_results.json
 
 # macOS 파인더가 디렉터리마다 만든다. 저장소 내용과 무관하다.
 .DS_Store
+
+# npm 의존성. 잠금 파일로 재현한다.
+node_modules/
